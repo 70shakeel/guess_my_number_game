@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Game, Player, Difficulty, supabase } from '@/lib/supabase'
+import { Game, Player, Difficulty, AudioPack, supabase } from '@/lib/supabase'
 import { buildInitialPlayerOrder } from '@/lib/game-logic'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,10 +17,22 @@ interface Props {
   onRefresh: () => void
 }
 
+const DIFFICULTY_OPTIONS: { value: Difficulty; icon: string; label: string; desc: string; active: string }[] = [
+  { value: 'easy', icon: '📖', label: 'Easy',  desc: 'Event log visible', active: 'border-amber-500/60 bg-amber-500/15 text-amber-300' },
+  { value: 'hard', icon: '🔥', label: 'Hard',  desc: 'No event log',      active: 'border-red-500/60 bg-red-500/15 text-red-300' },
+]
+
+const AUDIO_OPTIONS: { value: AudioPack; icon: string; label: string; desc: string; active: string }[] = [
+  { value: 'normal', icon: '🎺', label: 'Normal', desc: 'Sad trombone & buzzer', active: 'border-amber-500/60 bg-amber-500/15 text-amber-300' },
+  { value: 'kids',   icon: '🎈', label: 'Kids',   desc: 'Bouncy & silly',        active: 'border-green-500/60 bg-green-500/15 text-green-300' },
+  { value: 'adult',  icon: '🔞', label: '18+',    desc: 'Dramatic crowd sounds',  active: 'border-purple-500/60 bg-purple-500/15 text-purple-300' },
+]
+
 export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
   const [copied, setCopied] = useState(false)
   const [starting, setStarting] = useState(false)
   const [difficulty, setDifficulty] = useState<Difficulty>(game.difficulty ?? 'easy')
+  const [audioPack, setAudioPack] = useState<AudioPack>(game.audio_pack ?? 'normal')
   const isHost = myPlayer.id === game.host_player_id
 
   async function copyCode() {
@@ -37,18 +49,15 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
     setStarting(true)
     try {
       const order = buildInitialPlayerOrder(players)
-      const firstGuesser = order[0]
-      const firstTarget = order[1]
-
       await supabase.from('games').update({
         status: 'playing',
         difficulty,
+        audio_pack: audioPack,
         player_order: order,
-        current_guesser_id: firstGuesser,
-        current_target_id: firstTarget,
+        current_guesser_id: order[0],
+        current_target_id: order[1],
         round: 1,
       }).eq('id', game.id)
-
       onRefresh()
     } catch (e) {
       toast.error('Failed to start game.')
@@ -67,7 +76,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
       >
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-linear-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
             Game Lobby
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -75,7 +84,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
           </p>
         </div>
 
-        {/* Game code card */}
+        {/* Game code */}
         <Card className="glass border-white/10">
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground mb-2 text-center">Share this code</p>
@@ -111,17 +120,11 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.07 }}
               >
-                <PlayerCard
-                  player={p}
-                  isMe={p.id === myPlayer.id}
-                  isHost={p.id === game.host_player_id}
-                />
+                <PlayerCard player={p} isMe={p.id === myPlayer.id} isHost={p.id === game.host_player_id} />
               </motion.div>
             ))}
             {players.length < 2 && (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                Waiting for more players…
-              </p>
+              <p className="text-xs text-muted-foreground text-center py-2">Waiting for more players…</p>
             )}
           </CardContent>
         </Card>
@@ -133,7 +136,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
             <ul className="space-y-1 text-xs">
               <li>1. Each player secretly sets a number (1–100)</li>
               <li>2. Players take turns — the guesser picks a number for the next player</li>
-              <li>3. The target player responds: Correct / Higher / Lower</li>
+              <li>3. The target responds: Higher or Lower (Correct is auto-detected)</li>
               <li>4. If correct, that player is eliminated</li>
               <li>5. Last player standing wins 🏆</li>
             </ul>
@@ -142,28 +145,44 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
 
         {isHost && (
           <>
-            {/* Difficulty picker */}
+            {/* Difficulty */}
             <Card className="glass border-white/10">
               <CardContent className="p-4 space-y-3">
                 <p className="text-xs text-muted-foreground text-center uppercase tracking-wider">Difficulty</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['easy', 'hard'] as Difficulty[]).map((d) => (
+                  {DIFFICULTY_OPTIONS.map((opt) => (
                     <button
-                      key={d}
-                      onClick={() => setDifficulty(d)}
+                      key={opt.value}
+                      onClick={() => setDifficulty(opt.value)}
                       className={`rounded-xl p-3 border text-sm font-semibold transition-all ${
-                        difficulty === d
-                          ? d === 'easy'
-                            ? 'border-amber-500/60 bg-amber-500/15 text-amber-300'
-                            : 'border-red-500/60 bg-red-500/15 text-red-300'
-                          : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
+                        difficulty === opt.value ? opt.active : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
                       }`}
                     >
-                      <div className="text-xl mb-1">{d === 'easy' ? '📖' : '🔥'}</div>
-                      <div className="capitalize">{d}</div>
-                      <div className="text-xs font-normal opacity-70 mt-0.5">
-                        {d === 'easy' ? 'Event log visible' : 'No event log'}
-                      </div>
+                      <div className="text-xl mb-1">{opt.icon}</div>
+                      <div>{opt.label}</div>
+                      <div className="text-xs font-normal opacity-70 mt-0.5">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Audio pack */}
+            <Card className="glass border-white/10">
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs text-muted-foreground text-center uppercase tracking-wider">Audio Pack</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {AUDIO_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setAudioPack(opt.value)}
+                      className={`rounded-xl p-3 border text-sm font-semibold transition-all ${
+                        audioPack === opt.value ? opt.active : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{opt.icon}</div>
+                      <div>{opt.label}</div>
+                      <div className="text-xs font-normal opacity-70 mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
                 </div>

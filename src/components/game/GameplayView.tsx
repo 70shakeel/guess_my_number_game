@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Game, Player, GameEvent, supabase } from '@/lib/supabase'
+import { playEliminatedSound, playWrongGuessSound, playResponseSound } from '@/lib/sounds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,7 +48,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
 
   const pendingGuessValue = hasPendingGuess ? (lastGuessEvent!.payload as { number: number }).number : null
 
-  // Flash animation whenever a new response event arrives
+  // Flash animation + sound whenever a new response event arrives
   useEffect(() => {
     if (!lastResponseEvent) return
     if (lastResponseEvent.id === lastSeenResponseId.current) return
@@ -55,6 +56,13 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
     const r = (lastResponseEvent.payload as { response: ResponseType }).response
     if (!r) return
     setFlashResponse(r)
+    const pack = game.audio_pack ?? 'normal'
+    if (r === 'correct') {
+      playEliminatedSound(pack)
+    } else {
+      playWrongGuessSound(pack)
+      playResponseSound(r, pack)
+    }
     const t = setTimeout(() => setFlashResponse(null), 1800)
     return () => clearTimeout(t)
   }, [lastResponseEvent?.id])

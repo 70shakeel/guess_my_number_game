@@ -68,6 +68,9 @@ export default function GamePage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `game_id=eq.${gameId}` }, (payload) => {
         setEvents((prev) => [...prev, payload.new as GameEvent])
       })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'game_events', filter: `game_id=eq.${gameId}` }, () => {
+        setEvents([])
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(gameChannel) }
@@ -117,7 +120,7 @@ export default function GamePage() {
         )}
         {phase === 'finished' && (
           <motion.div key="finished" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-            <WinnerView game={game} players={players} myPlayer={myPlayer} />
+            <WinnerView game={game} players={players} myPlayer={myPlayer} events={events} />
           </motion.div>
         )}
       </AnimatePresence>

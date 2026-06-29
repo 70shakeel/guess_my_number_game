@@ -21,12 +21,14 @@ export const supabase = new Proxy({} as SupabaseClient, {
 
 export type GameStatus = 'waiting' | 'playing' | 'finished'
 export type Difficulty = 'easy' | 'hard'
+export type AudioPack = 'normal' | 'kids' | 'adult'
 
 export interface Game {
   id: string
   code: string
   status: GameStatus
   difficulty: Difficulty
+  audio_pack: AudioPack
   host_player_id: string | null
   current_guesser_id: string | null
   current_target_id: string | null
