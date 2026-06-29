@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Game, Player, GameEvent, supabase } from '@/lib/supabase'
 import { getNextGuesserAndTarget } from '@/lib/game-logic'
@@ -29,6 +29,21 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
 
   const isMyTurnToGuess = myPlayer.id === game.current_guesser_id
   const isMyTurnToRespond = myPlayer.id === game.current_target_id
+
+  // Auto-submit correct when the guess matches my secret number
+  useEffect(() => {
+    if (
+      isMyTurnToRespond &&
+      hasPendingGuess &&
+      pendingGuessValue !== null &&
+      myPlayer.secret_number !== null &&
+      pendingGuessValue === myPlayer.secret_number &&
+      !submitting
+    ) {
+      submitResponse('correct')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMyTurnToRespond, hasPendingGuess, pendingGuessValue, myPlayer.secret_number])
 
   // Find the pending guess event (guess without a response yet)
   const lastGuessEvent = [...events].reverse().find((e) => e.type === 'guess')
@@ -264,16 +279,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
                   <p className="text-sm font-medium text-center text-red-300">
                     {guesser?.username} guessed <strong>{pendingGuessValue}</strong> — respond:
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant="outline"
-                      className="border-green-500/40 text-green-400 hover:bg-green-500/20 h-14 flex-col gap-1"
-                      onClick={() => submitResponse('correct')}
-                      disabled={submitting}
-                    >
-                      <span className="text-xl">✓</span>
-                      <span className="text-xs">Correct!</span>
-                    </Button>
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
                       className="border-amber-500/40 text-amber-400 hover:bg-amber-500/20 h-14 flex-col gap-1"
