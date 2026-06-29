@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Game, Player, GameEvent, supabase } from '@/lib/supabase'
-import { getNextGuesserAndTarget } from '@/lib/game-logic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,9 +18,19 @@ interface Props {
   onRefresh: () => void
 }
 
+type ResponseType = 'higher' | 'lower' | 'correct'
+
+const RESPONSE_CONFIG: Record<ResponseType, { icon: string; label: string; color: string; bg: string }> = {
+  higher: { icon: '↑', label: 'HIGHER', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  lower:  { icon: '↓', label: 'LOWER',  color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+  correct:{ icon: '✓', label: 'CORRECT!',color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+}
+
 export function GameplayView({ game, players, myPlayer, events, onRefresh }: Props) {
   const [guessInput, setGuessInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [flashResponse, setFlashResponse] = useState<ResponseType | null>(null)
+  const lastSeenResponseId = useRef<string | null>(null)
 
   const activePlayers = players.filter((p) => !p.is_eliminated)
   const guesser = players.find((p) => p.id === game.current_guesser_id)
@@ -30,7 +39,6 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   const isMyTurnToGuess = myPlayer.id === game.current_guesser_id
   const isMyTurnToRespond = myPlayer.id === game.current_target_id
 
-  // Find the pending guess event (guess without a response yet)
   const lastGuessEvent = [...events].reverse().find((e) => e.type === 'guess')
   const lastResponseEvent = [...events].reverse().find((e) => e.type === 'response')
   const hasPendingGuess =
@@ -39,7 +47,19 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
 
   const pendingGuessValue = hasPendingGuess ? (lastGuessEvent!.payload as { number: number }).number : null
 
-  // Auto-submit correct when the guess matches my secret number
+  // Flash animation whenever a new response event arrives
+  useEffect(() => {
+    if (!lastResponseEvent) return
+    if (lastResponseEvent.id === lastSeenResponseId.current) return
+    lastSeenResponseId.current = lastResponseEvent.id
+    const r = (lastResponseEvent.payload as { response: ResponseType }).response
+    if (!r) return
+    setFlashResponse(r)
+    const t = setTimeout(() => setFlashResponse(null), 1800)
+    return () => clearTimeout(t)
+  }, [lastResponseEvent?.id])
+
+  // Auto-submit correct when guess matches my secret number
   useEffect(() => {
     if (
       isMyTurnToRespond &&
@@ -78,7 +98,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
     }
   }
 
-  async function submitResponse(response: 'correct' | 'higher' | 'lower') {
+  async function submitResponse(response: ResponseType) {
     if (!hasPendingGuess) return
     setSubmitting(true)
     try {
@@ -91,10 +111,8 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
       })
 
       if (response === 'correct') {
-        // Eliminate this player
         await supabase.from('players').update({ is_eliminated: true }).eq('id', myPlayer.id)
 
-        // Check if only one remains
         const { data: remaining } = await supabase
           .from('players')
           .select()
@@ -105,11 +123,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
 
         if (stillActive.length === 1) {
           const winner = stillActive[0]
-          await supabase.from('games').update({
-            status: 'finished',
-            winner_id: winner.id,
-          }).eq('id', game.id)
-
+          await supabase.from('games').update({ status: 'finished', winner_id: winner.id }).eq('id', game.id)
           await supabase.from('game_events').insert({
             game_id: game.id,
             type: 'win',
@@ -117,15 +131,11 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             payload: { winner_username: winner.username },
           })
         } else {
-          // Advance turn — next guesser and target
           const freshPlayers = (remaining ?? []).filter((p) => p.id !== myPlayer.id)
-          const order = game.player_order.filter((id) =>
-            freshPlayers.some((p) => p.id === id)
-          )
+          const order = game.player_order.filter((id) => freshPlayers.some((p) => p.id === id))
           const currentGuesserIdx = order.indexOf(game.current_guesser_id ?? order[0])
           const nextGuesserIdx = (currentGuesserIdx + 1) % order.length
           const nextTargetIdx = (nextGuesserIdx + 1) % order.length
-
           await supabase.from('games').update({
             current_guesser_id: order[nextGuesserIdx],
             current_target_id: order[nextTargetIdx],
@@ -133,14 +143,10 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
           }).eq('id', game.id)
         }
       } else {
-        // Advance turn without elimination
-        const order = game.player_order.filter((id) =>
-          activePlayers.some((p) => p.id === id)
-        )
+        const order = game.player_order.filter((id) => activePlayers.some((p) => p.id === id))
         const currentGuesserIdx = order.indexOf(game.current_guesser_id ?? order[0])
         const nextGuesserIdx = (currentGuesserIdx + 1) % order.length
         const nextTargetIdx = (nextGuesserIdx + 1) % order.length
-
         await supabase.from('games').update({
           current_guesser_id: order[nextGuesserIdx],
           current_target_id: order[nextTargetIdx],
@@ -157,8 +163,50 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
     }
   }
 
+  const cfg = flashResponse ? RESPONSE_CONFIG[flashResponse] : null
+
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 pb-8">
+      {/* Full-screen response flash */}
+      <AnimatePresence>
+        {flashResponse && cfg && (
+          <motion.div
+            key={flashResponse + lastResponseEvent?.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{ background: cfg.bg, backdropFilter: 'blur(2px)' }}
+          >
+            <motion.div
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.3, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="flex flex-col items-center gap-2"
+            >
+              <motion.span
+                animate={{ y: flashResponse === 'higher' ? [-8, 8, -8] : flashResponse === 'lower' ? [8, -8, 8] : [0] }}
+                transition={{ repeat: 2, duration: 0.4 }}
+                style={{ fontSize: 120, lineHeight: 1, color: cfg.color, textShadow: `0 0 60px ${cfg.color}88` }}
+              >
+                {cfg.icon}
+              </motion.span>
+              <span
+                className="text-4xl font-black tracking-widest"
+                style={{ color: cfg.color, textShadow: `0 0 30px ${cfg.color}66` }}
+              >
+                {cfg.label}
+              </span>
+              <span className="text-sm text-white/50 mt-1">
+                {target?.username} responded
+              </span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-2xl mx-auto space-y-4 pt-6">
         {/* Round indicator */}
         <div className="flex items-center justify-between">
@@ -166,7 +214,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
           <span className="text-xs text-muted-foreground">{activePlayers.length} players remaining</span>
         </div>
 
-        {/* Current turn info */}
+        {/* Current turn */}
         <Card className="glass border-white/10">
           <CardContent className="p-5">
             <AnimatePresence mode="wait">
@@ -181,15 +229,13 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
                   <p className="text-xs text-yellow-400 mb-1">Guesser</p>
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-2xl mx-auto mb-1"
-                    style={{ backgroundColor: (guesser?.avatar_color ?? '#6366f1') + '33', border: `2px solid ${(guesser?.avatar_color ?? '#6366f1')}66` }}
+                    style={{ backgroundColor: (guesser?.avatar_color ?? '#f59e0b') + '33', border: `2px solid ${(guesser?.avatar_color ?? '#f59e0b')}66` }}
                   >
                     {guesser?.avatar ?? '?'}
                   </div>
                   <p className="text-sm font-medium">{guesser?.username ?? '…'}</p>
                 </div>
-
                 <div className="text-2xl text-muted-foreground">→</div>
-
                 <div className="text-center flex-1">
                   <p className="text-xs text-red-400 mb-1">Target</p>
                   <div
@@ -205,7 +251,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
           </CardContent>
         </Card>
 
-        {/* Pending guess display */}
+        {/* Pending guess */}
         <AnimatePresence>
           {hasPendingGuess && pendingGuessValue !== null && (
             <motion.div
@@ -215,9 +261,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             >
               <Card className="border-yellow-500/30 bg-yellow-500/10">
                 <CardContent className="p-4 text-center">
-                  <p className="text-xs text-yellow-400 mb-1">
-                    {guesser?.username} guessed
-                  </p>
+                  <p className="text-xs text-yellow-400 mb-1">{guesser?.username} guessed</p>
                   <p className="text-5xl font-bold font-mono text-yellow-300">{pendingGuessValue}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {isMyTurnToRespond ? 'Is this your number?' : `Waiting for ${target?.username} to respond…`}
@@ -255,7 +299,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
                       autoFocus
                     />
                     <Button
-                      className="h-12 px-6 bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-900 border-0 font-semibold"
+                      className="h-12 px-6 bg-linear-to-r from-amber-500 to-yellow-500 text-stone-900 border-0 font-semibold"
                       onClick={submitGuess}
                       disabled={submitting || !guessInput}
                     >
@@ -347,8 +391,8 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
               <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Event Log</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <ScrollArea className="h-40">
-                <div className="space-y-1">
+              <ScrollArea className="h-32">
+                <div className="space-y-1 pr-2">
                   {[...events].reverse().map((e) => (
                     <EventLine key={e.id} event={e} players={players} />
                   ))}
@@ -367,22 +411,27 @@ function EventLine({ event, players }: { event: GameEvent; players: Player[] }) 
   const target = players.find((p) => p.id === event.target_id)
 
   let text = ''
+  let color = 'text-muted-foreground'
+
   if (event.type === 'guess') {
     const n = (event.payload as { number: number }).number
     text = `${actor?.username ?? '?'} guessed ${n} for ${target?.username ?? '?'}`
+    color = 'text-yellow-500/70'
   } else if (event.type === 'response') {
     const r = (event.payload as { response: string }).response
-    text = `${actor?.username ?? '?'} said: ${r}`
+    const icon = r === 'higher' ? '↑' : r === 'lower' ? '↓' : '✓'
+    text = `${actor?.username ?? '?'} said ${icon} ${r}`
+    color = r === 'correct' ? 'text-green-500/70' : r === 'higher' ? 'text-amber-500/70' : 'text-orange-500/70'
   } else if (event.type === 'eliminate') {
-    text = `${actor?.username ?? '?'} was eliminated!`
+    text = `${actor?.username ?? '?'} was eliminated`
+    color = 'text-red-500/70'
   } else if (event.type === 'win') {
     const w = (event.payload as { winner_username: string }).winner_username
     text = `🏆 ${w} wins!`
+    color = 'text-amber-400'
   }
 
   return (
-    <p className="text-xs text-muted-foreground py-0.5">
-      {text}
-    </p>
+    <p className={`text-xs py-0.5 ${color}`}>{text}</p>
   )
 }
