@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PlayerCard } from './PlayerCard'
 import { toast } from 'sonner'
 import { Copy, Check, Users } from 'lucide-react'
+import { LeaveGameButton } from './LeaveGameButton'
 
 interface Props {
   game: Game
@@ -69,6 +70,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <LeaveGameButton game={game} myPlayer={myPlayer} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

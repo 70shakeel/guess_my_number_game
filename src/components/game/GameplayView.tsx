@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Game, Player, GameEvent, supabase } from '@/lib/supabase'
 import { playEliminatedSound, playWrongGuessSound, playResponseSound } from '@/lib/sounds'
+import { LeaveGameButton } from './LeaveGameButton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -171,6 +172,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
 
   return (
     <div className="min-h-screen p-4 pb-8">
+      <LeaveGameButton game={game} myPlayer={myPlayer} activePlayers={activePlayers} />
       {/* Full-screen response flash */}
       <AnimatePresence>
         {flashResponse && cfg && (

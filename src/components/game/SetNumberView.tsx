@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { LeaveGameButton } from './LeaveGameButton'
 
 interface Props {
   game: Game
@@ -37,6 +38,7 @@ export function SetNumberView({ game, myPlayer, onDone }: Props) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <LeaveGameButton game={game} myPlayer={myPlayer} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
