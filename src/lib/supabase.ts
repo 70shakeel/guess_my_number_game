@@ -6,7 +6,7 @@ let _supabase: SupabaseClient | null = null
 export function getSupabase(): SupabaseClient {
   if (!_supabase) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     _supabase = createBrowserClient(url, key)
   }
   return _supabase
