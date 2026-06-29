@@ -5,6 +5,13 @@ function ctx(): AudioContext | null {
   return new AudioContext()
 }
 
+function playFile(path: string, volume = 1) {
+  if (typeof window === 'undefined') return
+  const audio = new Audio(path)
+  audio.volume = volume
+  audio.play().catch(() => {})
+}
+
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 function playTone(
@@ -135,147 +142,20 @@ function kidsLower() {
 
 // ─── ADULT (18+) pack ──────────────────────────────────────────────────────
 
-// Sharp percussive spank hit followed by an "ahhh~" moan
 function adultEliminated() {
-  const ac = ctx(); if (!ac) return
-  const t = ac.currentTime + 0.05
-
-  // --- SPANK: sharp noise burst (hand-on-skin thwack) ---
-  const spanks = [0, 0.55, 1.05]
-  spanks.forEach((offset) => {
-    const st = t + offset
-    // white noise via buffer
-    const bufLen = ac.sampleRate * 0.06
-    const buf = ac.createBuffer(1, bufLen, ac.sampleRate)
-    const data = buf.getChannelData(0)
-    for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1)
-    const noise = ac.createBufferSource()
-    noise.buffer = buf
-
-    // shape it: instant attack, fast decay — gives a crisp smack
-    const noiseGain = ac.createGain()
-    noiseGain.gain.setValueAtTime(0.9, st)
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, st + 0.055)
-
-    // body thump underneath
-    const thump = ac.createOscillator()
-    const thumpGain = ac.createGain()
-    thump.type = 'sine'
-    thump.frequency.setValueAtTime(180, st)
-    thump.frequency.exponentialRampToValueAtTime(40, st + 0.08)
-    thumpGain.gain.setValueAtTime(0.6, st)
-    thumpGain.gain.exponentialRampToValueAtTime(0.001, st + 0.09)
-
-    noise.connect(noiseGain); noiseGain.connect(ac.destination)
-    thump.connect(thumpGain); thumpGain.connect(ac.destination)
-    noise.start(st); noise.stop(st + 0.07)
-    thump.start(st); thump.stop(st + 0.1)
-  })
-
-  // --- AHH moan: breathy formant after last spank ---
-  const mt = t + 1.3
-  const moans = [
-    { freq: 260, vibRate: 5.5, vibDepth: 8, vol: 0.18, dur: 0.9 },
-    { freq: 264, vibRate: 5,   vibDepth: 6, vol: 0.10, dur: 0.85 },
-    { freq: 520, vibRate: 6,   vibDepth: 5, vol: 0.06, dur: 0.8 },  // 1st formant
-    { freq: 780, vibRate: 5.5, vibDepth: 4, vol: 0.04, dur: 0.75 }, // 2nd formant
-  ]
-  moans.forEach(({ freq, vibRate, vibDepth, vol, dur }) => {
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(freq * 0.88, mt)
-    osc.frequency.linearRampToValueAtTime(freq, mt + 0.12)        // pitch rise
-    osc.frequency.linearRampToValueAtTime(freq * 0.96, mt + dur)  // slight fall-off
-    gain.gain.setValueAtTime(0, mt)
-    gain.gain.linearRampToValueAtTime(vol, mt + 0.1)
-    gain.gain.exponentialRampToValueAtTime(0.001, mt + dur)
-    osc.connect(gain); gain.connect(ac.destination)
-    addVibrato(ac, osc, vibRate, vibDepth, mt, dur)
-    osc.start(mt); osc.stop(mt + dur + 0.05)
-  })
+  playFile('/sounds/adult/812003__jackiecalistahhh__moan-188-oh-my-god-jackie-calistahhh.wav', 0.9)
 }
 
-// Wrong guess: single spank + quick surprised "ah!"
 function adultWrongGuess() {
-  const ac = ctx(); if (!ac) return
-  const t = ac.currentTime + 0.02
-
-  // spank
-  const bufLen = ac.sampleRate * 0.055
-  const buf = ac.createBuffer(1, bufLen, ac.sampleRate)
-  const data = buf.getChannelData(0)
-  for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1)
-  const noise = ac.createBufferSource()
-  noise.buffer = buf
-  const noiseGain = ac.createGain()
-  noiseGain.gain.setValueAtTime(0.75, t)
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05)
-  noise.connect(noiseGain); noiseGain.connect(ac.destination)
-  noise.start(t); noise.stop(t + 0.06)
-
-  const thump = ac.createOscillator()
-  const thumpGain = ac.createGain()
-  thump.type = 'sine'
-  thump.frequency.setValueAtTime(160, t)
-  thump.frequency.exponentialRampToValueAtTime(40, t + 0.07)
-  thumpGain.gain.setValueAtTime(0.5, t)
-  thumpGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
-  thump.connect(thumpGain); thumpGain.connect(ac.destination)
-  thump.start(t); thump.stop(t + 0.09)
-
-  // surprised "ah!" — short sharp moan
-  const at = t + 0.1
-  ;[{ f: 320, v: 0.16 }, { f: 640, v: 0.07 }, { f: 1000, v: 0.03 }].forEach(({ f, v }) => {
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(f * 0.9, at)
-    osc.frequency.linearRampToValueAtTime(f, at + 0.06)
-    osc.frequency.linearRampToValueAtTime(f * 1.05, at + 0.2)
-    gain.gain.setValueAtTime(0, at)
-    gain.gain.linearRampToValueAtTime(v, at + 0.05)
-    gain.gain.exponentialRampToValueAtTime(0.001, at + 0.28)
-    osc.connect(gain); gain.connect(ac.destination)
-    addVibrato(ac, osc, 6, 7, at, 0.28)
-    osc.start(at); osc.stop(at + 0.3)
-  })
+  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
 }
 
-// Higher: rising "ooh~"
 function adultHigher() {
-  const ac = ctx(); if (!ac) return
-  const t = ac.currentTime + 0.02
-  ;[{ f: 300, v: 0.15 }, { f: 600, v: 0.06 }].forEach(({ f, v }) => {
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(f, t)
-    osc.frequency.linearRampToValueAtTime(f * 1.35, t + 0.22)
-    gain.gain.setValueAtTime(0, t)
-    gain.gain.linearRampToValueAtTime(v, t + 0.04)
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
-    osc.connect(gain); gain.connect(ac.destination)
-    osc.start(t); osc.stop(t + 0.27)
-  })
+  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
 }
 
-// Lower: descending "ohh~"
 function adultLower() {
-  const ac = ctx(); if (!ac) return
-  const t = ac.currentTime + 0.02
-  ;[{ f: 380, v: 0.15 }, { f: 760, v: 0.06 }].forEach(({ f, v }) => {
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(f, t)
-    osc.frequency.linearRampToValueAtTime(f * 0.68, t + 0.22)
-    gain.gain.setValueAtTime(0, t)
-    gain.gain.linearRampToValueAtTime(v, t + 0.04)
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
-    osc.connect(gain); gain.connect(ac.destination)
-    osc.start(t); osc.stop(t + 0.27)
-  })
+  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────
