@@ -12,11 +12,19 @@
 
 ### Home Page
 
-[![Number Cipher Home Page](https://api.microlink.io/?url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app&screenshot=true&meta=false&embed=screenshot.url)](https://guess-my-number-game-9fi1.vercel.app)
+![Home Page](public/home)
 
 ### Game Lobby
 
-[![Number Cipher Game Lobby](https://api.microlink.io/?url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app%2Fgame%2Fb2bf8b87-1b8a-48fc-8d49-4968b6c506c3&screenshot=true&meta=false&embed=screenshot.url)](https://guess-my-number-game-9fi1.vercel.app)
+![Game Lobby](public/lobby)
+
+### Gameplay Screen 1
+
+![Gameplay Screen 1](public/2)
+
+### Gameplay Screen 2
+
+![Gameplay Screen 2](public/3)
 
 ---
 
@@ -32,7 +40,7 @@
 ## Tech Stack
 
 | Technology | Purpose |
-|---|---|
+|-------|--------|
 | [Next.js 16](https://nextjs.org) | App Router, SSR |
 | [Supabase](https://supabase.com) | Postgres DB + Realtime subscriptions |
 | [shadcn/ui](https://ui.shadcn.com) | UI components |
@@ -58,15 +66,3 @@ Create a `.env.local` file:
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Live Demo
-
-**[https://guess-my-number-game-9fi1.vercel.app](https://guess-my-number-game-9fi1.vercel.app)**
