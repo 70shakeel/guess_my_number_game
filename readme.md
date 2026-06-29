@@ -11,41 +11,40 @@
 ## Screenshots
 
 ### Home Page
-
 ![Home Page](public/home)
 
 ### Game Lobby
-
 ![Game Lobby](public/lobby)
 
-### Gameplay Screen 1
-
+### Gameplay
 ![Gameplay Screen 1](public/2)
-
-### Gameplay Screen 2
-
 ![Gameplay Screen 2](public/3)
 
 ---
 
 ## How to Play
 
-1. **Create a game** — you get a 6-character invite code and a random avatar/username
+1. **Create a game** — get a 6-character invite code and a random avatar/username
 2. **Share the code** — other players join using the code
-3. **Set your secret number** — each player picks a number between 1 and 100, hidden from everyone else
-4. **Take turns guessing** — each turn, the guesser tries to guess the next player's secret number
-5. **Target responds** — if the guess is wrong, the target says Higher or Lower. If correct, it's automatically detected and the target is eliminated
-6. **Last one standing wins** — the player whose number is never guessed wins
+3. **Choose difficulty** — Easy (event log visible) or Hard (no event log)
+4. **Set your secret number** — each player picks a number between 1–100, hidden from everyone else
+5. **Take turns guessing** — the guesser tries to guess the next player's secret number
+6. **Target responds** — Higher or Lower; if the guess is correct it's detected automatically and the target is eliminated
+7. **Last one standing wins** — the player whose number is never guessed wins 🏆
+
+---
 
 ## Tech Stack
 
 | Technology | Purpose |
-|-------|--------|
+|---|---|
 | [Next.js 16](https://nextjs.org) | App Router, SSR |
 | [Supabase](https://supabase.com) | Postgres DB + Realtime subscriptions |
 | [shadcn/ui](https://ui.shadcn.com) | UI components |
 | [Framer Motion](https://www.framer.com/motion) | Animations |
 | [next-themes](https://github.com/pacocoursey/next-themes) | Dark mode |
+
+---
 
 ## Getting Started
 
@@ -66,3 +65,15 @@ Create a `.env.local` file:
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Live Demo
+
+**[https://guess-my-number-game-9fi1.vercel.app](https://guess-my-number-game-9fi1.vercel.app)**
