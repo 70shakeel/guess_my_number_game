@@ -30,6 +30,15 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   const isMyTurnToGuess = myPlayer.id === game.current_guesser_id
   const isMyTurnToRespond = myPlayer.id === game.current_target_id
 
+  // Find the pending guess event (guess without a response yet)
+  const lastGuessEvent = [...events].reverse().find((e) => e.type === 'guess')
+  const lastResponseEvent = [...events].reverse().find((e) => e.type === 'response')
+  const hasPendingGuess =
+    lastGuessEvent &&
+    (!lastResponseEvent || new Date(lastGuessEvent.created_at) > new Date(lastResponseEvent.created_at))
+
+  const pendingGuessValue = hasPendingGuess ? (lastGuessEvent!.payload as { number: number }).number : null
+
   // Auto-submit correct when the guess matches my secret number
   useEffect(() => {
     if (
@@ -44,15 +53,6 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMyTurnToRespond, hasPendingGuess, pendingGuessValue, myPlayer.secret_number])
-
-  // Find the pending guess event (guess without a response yet)
-  const lastGuessEvent = [...events].reverse().find((e) => e.type === 'guess')
-  const lastResponseEvent = [...events].reverse().find((e) => e.type === 'response')
-  const hasPendingGuess =
-    lastGuessEvent &&
-    (!lastResponseEvent || new Date(lastGuessEvent.created_at) > new Date(lastResponseEvent.created_at))
-
-  const pendingGuessValue = hasPendingGuess ? (lastGuessEvent!.payload as { number: number }).number : null
 
   async function submitGuess() {
     const n = parseInt(guessInput)
