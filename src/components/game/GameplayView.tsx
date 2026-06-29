@@ -384,8 +384,8 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
           ))}
         </div>
 
-        {/* Event log */}
-        {events.length > 0 && (
+        {/* Event log — only in easy mode */}
+        {game.difficulty === 'easy' && events.length > 0 && (
           <Card className="glass border-white/8">
             <CardHeader className="pb-2 pt-4 px-4">
               <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Event Log</CardTitle>

@@ -20,11 +20,13 @@ export const supabase = new Proxy({} as SupabaseClient, {
 })
 
 export type GameStatus = 'waiting' | 'playing' | 'finished'
+export type Difficulty = 'easy' | 'hard'
 
 export interface Game {
   id: string
   code: string
   status: GameStatus
+  difficulty: Difficulty
   host_player_id: string | null
   current_guesser_id: string | null
   current_target_id: string | null

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Game, Player, supabase } from '@/lib/supabase'
+import { Game, Player, Difficulty, supabase } from '@/lib/supabase'
 import { buildInitialPlayerOrder } from '@/lib/game-logic'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,7 @@ interface Props {
 export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
   const [copied, setCopied] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [difficulty, setDifficulty] = useState<Difficulty>(game.difficulty ?? 'easy')
   const isHost = myPlayer.id === game.host_player_id
 
   async function copyCode() {
@@ -41,6 +42,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
 
       await supabase.from('games').update({
         status: 'playing',
+        difficulty,
         player_order: order,
         current_guesser_id: firstGuesser,
         current_target_id: firstTarget,
@@ -139,18 +141,48 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
         </Card>
 
         {isHost && (
-          <Button
-            className="w-full h-12 text-base font-semibold bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-900 border-0"
-            onClick={startGame}
-            disabled={starting || players.length < 2}
-          >
-            {starting ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Starting…
-              </span>
-            ) : `Start Game (${players.length} players)`}
-          </Button>
+          <>
+            {/* Difficulty picker */}
+            <Card className="glass border-white/10">
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs text-muted-foreground text-center uppercase tracking-wider">Difficulty</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['easy', 'hard'] as Difficulty[]).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDifficulty(d)}
+                      className={`rounded-xl p-3 border text-sm font-semibold transition-all ${
+                        difficulty === d
+                          ? d === 'easy'
+                            ? 'border-amber-500/60 bg-amber-500/15 text-amber-300'
+                            : 'border-red-500/60 bg-red-500/15 text-red-300'
+                          : 'border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{d === 'easy' ? '📖' : '🔥'}</div>
+                      <div className="capitalize">{d}</div>
+                      <div className="text-xs font-normal opacity-70 mt-0.5">
+                        {d === 'easy' ? 'Event log visible' : 'No event log'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              className="w-full h-12 text-base font-semibold bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-900 border-0"
+              onClick={startGame}
+              disabled={starting || players.length < 2}
+            >
+              {starting ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Starting…
+                </span>
+              ) : `Start Game (${players.length} players)`}
+            </Button>
+          </>
         )}
       </motion.div>
     </div>
