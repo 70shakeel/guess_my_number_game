@@ -12,11 +12,11 @@
 
 ### Home Page
 
-![Number Cipher Home Page](https://shot.screenshotapi.net/screenshot?token=&url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app&width=1280&height=720&output=image&file_type=png&wait_for_event=load)
+[![Number Cipher Home Page](https://api.microlink.io/?url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app&screenshot=true&meta=false&embed=screenshot.url)](https://guess-my-number-game-9fi1.vercel.app)
 
 ### Game Lobby
 
-![Number Cipher Game Lobby](https://shot.screenshotapi.net/screenshot?token=&url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app%2Fgame%2Fb2bf8b87-1b8a-48fc-8d49-4968b6c506c3&width=1280&height=720&output=image&file_type=png&wait_for_event=load)
+[![Number Cipher Game Lobby](https://api.microlink.io/?url=https%3A%2F%2Fguess-my-number-game-9fi1.vercel.app%2Fgame%2Fb2bf8b87-1b8a-48fc-8d49-4968b6c506c3&screenshot=true&meta=false&embed=screenshot.url)](https://guess-my-number-game-9fi1.vercel.app)
 
 ---
 
