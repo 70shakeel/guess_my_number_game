@@ -113,16 +113,11 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
       if (response === 'correct') {
         await supabase.from('players').update({ is_eliminated: true }).eq('id', myPlayer.id)
 
-        const { data: remaining } = await supabase
-          .from('players')
-          .select()
-          .eq('game_id', game.id)
-          .eq('is_eliminated', false)
+        // Use client-side state — avoids re-query timing issues where eliminated player still shows as active
+        const activeAfterElimination = activePlayers.filter((p) => p.id !== myPlayer.id)
 
-        const stillActive = (remaining ?? []).filter((p) => p.id !== myPlayer.id)
-
-        if (stillActive.length === 1) {
-          const winner = stillActive[0]
+        if (activeAfterElimination.length <= 1) {
+          const winner = activeAfterElimination[0]
           await supabase.from('games').update({ status: 'finished', winner_id: winner.id }).eq('id', game.id)
           await supabase.from('game_events').insert({
             game_id: game.id,
@@ -131,9 +126,9 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             payload: { winner_username: winner.username },
           })
         } else {
-          const freshPlayers = (remaining ?? []).filter((p) => p.id !== myPlayer.id)
-          const order = game.player_order.filter((id) => freshPlayers.some((p) => p.id === id))
-          const currentGuesserIdx = order.indexOf(game.current_guesser_id ?? order[0])
+          const order = game.player_order.filter((id) => activeAfterElimination.some((p) => p.id === id))
+          const rawIdx = order.indexOf(game.current_guesser_id ?? order[0])
+          const currentGuesserIdx = rawIdx === -1 ? 0 : rawIdx
           const nextGuesserIdx = (currentGuesserIdx + 1) % order.length
           const nextTargetIdx = (nextGuesserIdx + 1) % order.length
           await supabase.from('games').update({
@@ -144,7 +139,8 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
         }
       } else {
         const order = game.player_order.filter((id) => activePlayers.some((p) => p.id === id))
-        const currentGuesserIdx = order.indexOf(game.current_guesser_id ?? order[0])
+        const rawIdx = order.indexOf(game.current_guesser_id ?? order[0])
+        const currentGuesserIdx = rawIdx === -1 ? 0 : rawIdx
         const nextGuesserIdx = (currentGuesserIdx + 1) % order.length
         const nextTargetIdx = (nextGuesserIdx + 1) % order.length
         await supabase.from('games').update({
@@ -393,9 +389,11 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             <CardContent className="px-4 pb-4">
               <ScrollArea className="h-32">
                 <div className="space-y-1 pr-2">
-                  {[...events].reverse().map((e) => (
-                    <EventLine key={e.id} event={e} players={players} />
-                  ))}
+                  {[...events]
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map((e) => (
+                      <EventLine key={e.id} event={e} players={players} />
+                    ))}
                 </div>
               </ScrollArea>
             </CardContent>
