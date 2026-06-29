@@ -29,7 +29,13 @@ export default function GamePage() {
     ])
     if (gameData) setGame(gameData)
     if (playersData) setPlayers(playersData)
+    // Always use the authoritative DB list — deduplication happens here
     if (eventsData) setEvents(eventsData)
+  }, [gameId])
+
+  const loadPlayersOnly = useCallback(async () => {
+    const { data } = await supabase.from('players').select().eq('game_id', gameId).order('joined_at')
+    if (data) setPlayers(data)
   }, [gameId])
 
   useEffect(() => {
@@ -63,10 +69,11 @@ export default function GamePage() {
         setGame(payload.new as Game)
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` }, () => {
-        loadData()
+        loadPlayersOnly()
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `game_id=eq.${gameId}` }, (payload) => {
-        setEvents((prev) => [...prev, payload.new as GameEvent])
+        const incoming = payload.new as GameEvent
+        setEvents((prev) => prev.some((e) => e.id === incoming.id) ? prev : [...prev, incoming])
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'game_events', filter: `game_id=eq.${gameId}` }, () => {
         setEvents([])
@@ -74,7 +81,7 @@ export default function GamePage() {
       .subscribe()
 
     return () => { supabase.removeChannel(gameChannel) }
-  }, [gameId, loadData])
+  }, [gameId, loadData, loadPlayersOnly])
 
   if (phase === 'loading') {
     return (

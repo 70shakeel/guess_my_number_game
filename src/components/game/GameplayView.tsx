@@ -412,32 +412,59 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   )
 }
 
+function Name({ name, color }: { name: string; color?: string }) {
+  return <span className="font-medium" style={{ color: color ?? '#7dd3fc' }}>{name}</span>
+}
+
+function Num({ n }: { n: number }) {
+  return <span className="text-yellow-300 font-mono font-bold">{n}</span>
+}
+
 function EventLine({ event, players }: { event: GameEvent; players: Player[] }) {
   const actor = players.find((p) => p.id === event.actor_id)
   const target = players.find((p) => p.id === event.target_id)
 
-  let text = ''
-  let color = 'text-muted-foreground'
-
   if (event.type === 'guess') {
     const n = (event.payload as { number: number }).number
-    text = `${actor?.username ?? '?'} guessed ${n} for ${target?.username ?? '?'}`
-    color = 'text-yellow-500/70'
-  } else if (event.type === 'response') {
-    const r = (event.payload as { response: string }).response
-    const icon = r === 'higher' ? '↑' : r === 'lower' ? '↓' : '✓'
-    text = `${actor?.username ?? '?'} said ${icon} ${r}`
-    color = r === 'correct' ? 'text-green-500/70' : r === 'higher' ? 'text-amber-500/70' : 'text-orange-500/70'
-  } else if (event.type === 'eliminate') {
-    text = `${actor?.username ?? '?'} was eliminated`
-    color = 'text-red-500/70'
-  } else if (event.type === 'win') {
-    const w = (event.payload as { winner_username: string }).winner_username
-    text = `🏆 ${w} wins!`
-    color = 'text-amber-400'
+    return (
+      <p className="text-xs py-0.5 text-white/50">
+        <Name name={actor?.username ?? '?'} color={actor?.avatar_color} /> guessed <Num n={n} /> for <Name name={target?.username ?? '?'} color={target?.avatar_color} />
+      </p>
+    )
   }
 
-  return (
-    <p className={`text-xs py-0.5 ${color}`}>{text}</p>
-  )
+  if (event.type === 'response') {
+    const r = (event.payload as { response: string }).response
+    const isHigher = r === 'higher'
+    const isLower = r === 'lower'
+    const isCorrect = r === 'correct'
+    return (
+      <p className="text-xs py-0.5 text-white/50">
+        <Name name={actor?.username ?? '?'} color={actor?.avatar_color} /> said{' '}
+        {isHigher && <span className="text-amber-400 font-semibold">↑ Higher</span>}
+        {isLower  && <span className="text-orange-400 font-semibold">↓ Lower</span>}
+        {isCorrect && <span className="text-green-400 font-semibold">✓ Correct!</span>}
+      </p>
+    )
+  }
+
+  if (event.type === 'eliminate') {
+    return (
+      <p className="text-xs py-0.5 text-white/50">
+        <Name name={actor?.username ?? '?'} color={actor?.avatar_color} /> <span className="text-red-400">was eliminated 💀</span>
+      </p>
+    )
+  }
+
+  if (event.type === 'win') {
+    const w = (event.payload as { winner_username: string }).winner_username
+    const winner = players.find((p) => (p as Player).id === event.actor_id) as Player | undefined
+    return (
+      <p className="text-xs py-0.5">
+        <span className="text-amber-300 font-semibold">🏆 <Name name={w} color={winner?.avatar_color} /> wins!</span>
+      </p>
+    )
+  }
+
+  return null
 }

@@ -147,15 +147,51 @@ function adultEliminated() {
 }
 
 function adultWrongGuess() {
-  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
+  playFile('/sounds/adult/204805__ezcah__spanking.mp3', 0.85)
+}
+
+// Cache decoded buffers so we don't re-fetch on every play
+const _bufferCache = new Map<string, AudioBuffer>()
+
+async function getDecodedBuffer(path: string, ac: AudioContext): Promise<AudioBuffer> {
+  if (_bufferCache.has(path)) return _bufferCache.get(path)!
+  const res = await fetch(path)
+  const arr = await res.arrayBuffer()
+  const buf = await ac.decodeAudioData(arr)
+  _bufferCache.set(path, buf)
+  return buf
+}
+
+function playFileTrimmed(path: string, volume = 1, durationSec = 1) {
+  if (typeof window === 'undefined') return
+  const ac = new AudioContext()
+  getDecodedBuffer(path, ac).then((decoded) => {
+    const rate = decoded.sampleRate
+    const frames = Math.min(Math.floor(rate * durationSec), decoded.length)
+    // Physically slice the buffer so playback ends naturally at durationSec
+    const trimmed = ac.createBuffer(decoded.numberOfChannels, frames, rate)
+    for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+      trimmed.copyToChannel(decoded.getChannelData(ch).slice(0, frames), ch)
+    }
+    const source = ac.createBufferSource()
+    source.buffer = trimmed
+    const gain = ac.createGain()
+    gain.gain.setValueAtTime(volume, ac.currentTime)
+    // Fade out last 80ms to avoid click
+    gain.gain.setValueAtTime(volume, ac.currentTime + durationSec - 0.08)
+    gain.gain.linearRampToValueAtTime(0, ac.currentTime + durationSec)
+    source.connect(gain)
+    gain.connect(ac.destination)
+    source.start()
+  }).catch(() => {})
 }
 
 function adultHigher() {
-  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
+  playFileTrimmed('/sounds/adult/204805__ezcah__spanking.mp3', 0.85, 1)
 }
 
 function adultLower() {
-  playFile('/sounds/adult/204805__ezcah__spanking.flac', 0.85)
+  playFileTrimmed('/sounds/adult/204805__ezcah__spanking.mp3', 0.85, 1)
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────
