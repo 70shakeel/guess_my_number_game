@@ -64,6 +64,11 @@ export function PlayerCard({ player, isMe, isHost, isCurrentGuesser, isCurrentTa
               Target
             </Badge>
           )}
+          {player.is_bot && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-blue-500/40 text-blue-400">
+              Bot
+            </Badge>
+          )}
           {showEliminated && player.is_eliminated && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-gray-500/40 text-gray-500">
               Out

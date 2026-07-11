@@ -47,6 +47,7 @@ export interface Player {
   avatar_color: string
   secret_number: number | null
   is_eliminated: boolean
+  is_bot: boolean
   joined_at: string
 }
 

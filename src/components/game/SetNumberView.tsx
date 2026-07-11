@@ -57,14 +57,23 @@ export function SetNumberView({ game, myPlayer, onDone }: Props) {
 
             <div className="space-y-3">
               <Input
-                type="number"
-                min={1}
-                max={100}
+                type="text"
+                inputMode="numeric"
                 value={number}
-                onChange={(e) => setNumber(e.target.value)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 3)
+                  const n = parseInt(digits)
+                  if (digits === '') { setNumber(''); return }
+                  setNumber(n > 100 ? '100' : digits)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { handleSet(); return }
+                  if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                    e.preventDefault()
+                  }
+                }}
                 placeholder="1 – 100"
                 className="h-16 text-center text-3xl font-bold font-mono bg-white/5 border-white/10 focus:border-amber-500/60"
-                onKeyDown={(e) => e.key === 'Enter' && handleSet()}
                 autoFocus
               />
               <Button

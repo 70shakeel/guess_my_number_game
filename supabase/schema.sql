@@ -23,6 +23,7 @@ create table if not exists players (
   avatar_color text not null,
   secret_number int,
   is_eliminated boolean default false,
+  is_bot boolean default false,
   joined_at timestamptz default now()
 );
 

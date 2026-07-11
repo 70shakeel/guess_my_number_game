@@ -1,3 +1,6 @@
+export const BOT_NAMES = ['R2-D2', 'HAL 9000', 'WALL-E', 'GLaDOS', 'T-800']
+export const BOT_AVATARS = ['🤖', '🦾', '👾', '🧠', '⚡']
+
 export const ANIMAL_AVATARS = [
   '🦊', '🐼', '🦁', '🐯', '🐻', '🐨', '🦝', '🐸',
   '🦄', '🐺', '🦊', '🐧', '🦉', '🐙', '🦋', '🐬',

@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Game, Player, Difficulty, AudioPack, supabase } from '@/lib/supabase'
 import { buildInitialPlayerOrder } from '@/lib/game-logic'
+import { BOT_NAMES, BOT_AVATARS, AVATAR_COLORS } from '@/lib/avatars'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PlayerCard } from './PlayerCard'
 import { toast } from 'sonner'
-import { Copy, Check, Users } from 'lucide-react'
+import { Copy, Check, Users, Bot } from 'lucide-react'
 import { LeaveGameButton } from './LeaveGameButton'
 
 interface Props {
@@ -34,7 +35,10 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
   const [starting, setStarting] = useState(false)
   const [difficulty, setDifficulty] = useState<Difficulty>(game.difficulty ?? 'easy')
   const [audioPack, setAudioPack] = useState<AudioPack>(game.audio_pack ?? 'normal')
+  const [botCount, setBotCount] = useState(0)
   const isHost = myPlayer.id === game.host_player_id
+
+  const totalPlayers = players.length + botCount
 
   async function copyCode() {
     await navigator.clipboard.writeText(game.code)
@@ -43,13 +47,30 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
   }
 
   async function startGame() {
-    if (players.length < 2) {
+    if (totalPlayers < 2) {
       toast.error('Need at least 2 players to start.')
       return
     }
     setStarting(true)
     try {
-      const order = buildInitialPlayerOrder(players)
+      let allPlayers = [...players]
+
+      // Insert bot players with random secrets pre-assigned
+      if (botCount > 0) {
+        const botInserts = Array.from({ length: botCount }, (_, i) => ({
+          game_id: game.id,
+          username: BOT_NAMES[i % BOT_NAMES.length],
+          avatar: BOT_AVATARS[i % BOT_AVATARS.length],
+          avatar_color: AVATAR_COLORS[(AVATAR_COLORS.length - 1 - i) % AVATAR_COLORS.length],
+          secret_number: Math.floor(Math.random() * 100) + 1,
+          is_bot: true,
+        }))
+        const { data: newBots, error } = await supabase.from('players').insert(botInserts).select()
+        if (error) throw error
+        if (newBots) allPlayers = [...allPlayers, ...newBots]
+      }
+
+      const order = buildInitialPlayerOrder(allPlayers)
       await supabase.from('games').update({
         status: 'playing',
         difficulty,
@@ -125,7 +146,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
                 <PlayerCard player={p} isMe={p.id === myPlayer.id} isHost={p.id === game.host_player_id} />
               </motion.div>
             ))}
-            {players.length < 2 && (
+            {players.length < 2 && botCount === 0 && (
               <p className="text-xs text-muted-foreground text-center py-2">Waiting for more players…</p>
             )}
           </CardContent>
@@ -138,7 +159,7 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
             <ul className="space-y-1 text-xs">
               <li>1. Each player secretly sets a number (1–100)</li>
               <li>2. Players take turns — the guesser picks a number for the next player</li>
-              <li>3. The target responds: Higher or Lower (Correct is auto-detected)</li>
+              <li>3. The target auto-responds Higher or Lower (Correct is auto-detected)</li>
               <li>4. If correct, that player is eliminated</li>
               <li>5. Last player standing wins 🏆</li>
             </ul>
@@ -147,6 +168,40 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
 
         {isHost && (
           <>
+            {/* Bot count */}
+            <Card className="glass border-white/10">
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs text-muted-foreground text-center uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <Bot className="w-3 h-3" /> Bots
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => setBotCount((c) => Math.max(0, c - 1))}
+                    disabled={botCount === 0}
+                    className="w-10 h-10 rounded-xl border border-white/15 bg-white/5 text-lg font-bold hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    −
+                  </button>
+                  <div className="text-center w-20">
+                    <p className="text-2xl font-bold font-mono text-amber-300">{botCount}</p>
+                    <p className="text-xs text-muted-foreground">{botCount === 0 ? 'no bots' : botCount === 1 ? '1 bot' : `${botCount} bots`}</p>
+                  </div>
+                  <button
+                    onClick={() => setBotCount((c) => Math.min(5, c + 1))}
+                    disabled={botCount === 5}
+                    className="w-10 h-10 rounded-xl border border-white/15 bg-white/5 text-lg font-bold hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  >
+                    +
+                  </button>
+                </div>
+                {botCount > 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Bots use binary search — they&apos;ll narrow in fast
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Difficulty */}
             <Card className="glass border-white/10">
               <CardContent className="p-4 space-y-3">
@@ -194,14 +249,14 @@ export function LobbyView({ game, players, myPlayer, onRefresh }: Props) {
             <Button
               className="w-full h-12 text-base font-semibold bg-linear-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-900 border-0"
               onClick={startGame}
-              disabled={starting || players.length < 2}
+              disabled={starting || totalPlayers < 2}
             >
               {starting ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   Starting…
                 </span>
-              ) : `Start Game (${players.length} players)`}
+              ) : `Start Game (${totalPlayers} player${totalPlayers !== 1 ? 's' : ''})`}
             </Button>
           </>
         )}
