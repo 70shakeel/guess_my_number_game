@@ -105,10 +105,6 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-gradient-animated">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-purple-600/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-blue-600/8 rounded-full blur-3xl" />
-      </div>
       <AnimatePresence mode="wait">
         {phase === 'lobby' && (
           <motion.div key="lobby" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

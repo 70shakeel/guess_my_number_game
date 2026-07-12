@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Game, Player, GameEvent, supabase } from '@/lib/supabase'
 import { playEliminatedSound, playWrongGuessSound, playResponseSound } from '@/lib/sounds'
@@ -60,8 +60,8 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   const isMyTurnToGuess = myPlayer.id === game.current_guesser_id
   const isMyTurnToRespond = myPlayer.id === game.current_target_id
 
-  const lastGuessEvent = [...events].reverse().find((e) => e.type === 'guess')
-  const lastResponseEvent = [...events].reverse().find((e) => e.type === 'response')
+  const lastGuessEvent = useMemo(() => [...events].reverse().find((e) => e.type === 'guess'), [events])
+  const lastResponseEvent = useMemo(() => [...events].reverse().find((e) => e.type === 'response'), [events])
   const hasPendingGuess =
     lastGuessEvent &&
     (!lastResponseEvent || new Date(lastGuessEvent.created_at) > new Date(lastResponseEvent.created_at))
@@ -75,17 +75,19 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
     const r = (lastResponseEvent.payload as { response: ResponseType }).response
     if (!r) return
     setFlashResponse(r)
-    if (r !== 'correct') {
-      setTeaseMessage(TEASE_MESSAGES[Math.floor(Math.random() * TEASE_MESSAGES.length)])
-    } else {
-      setTeaseMessage(null)
-    }
+    setTeaseMessage(null)
     const pack = game.audio_pack ?? 'normal'
     if (r === 'correct') {
       playEliminatedSound(pack)
     } else {
       playWrongGuessSound(pack)
       playResponseSound(r, pack)
+      // tease appears after direction has been shown for 0.8s
+      const tease = setTimeout(() => {
+        setTeaseMessage(TEASE_MESSAGES[Math.floor(Math.random() * TEASE_MESSAGES.length)])
+      }, 800)
+      const hide = setTimeout(() => setFlashResponse(null), 2800)
+      return () => { clearTimeout(tease); clearTimeout(hide) }
     }
     const t = setTimeout(() => setFlashResponse(null), 1800)
     return () => clearTimeout(t)
@@ -178,7 +180,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
         } finally {
           botActing.current = false
         }
-      }, 900 + Math.floor(Math.random() * 800))
+      }, 2500 + Math.floor(Math.random() * 2000))
       return () => { clearTimeout(timer); botActing.current = false }
     }
 
@@ -204,7 +206,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
         } finally {
           botActing.current = false
         }
-      }, 600 + Math.floor(Math.random() * 600))
+      }, 1500 + Math.floor(Math.random() * 1500))
       return () => { clearTimeout(timer); botActing.current = false }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -250,6 +252,10 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   }
 
   const cfg = flashResponse ? RESPONSE_CONFIG[flashResponse] : null
+  const sortedEvents = useMemo(
+    () => [...events].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [events]
+  )
 
   return (
     <div className="min-h-screen p-4 pb-8">
@@ -265,7 +271,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-            style={{ background: cfg.bg, backdropFilter: 'blur(2px)' }}
+            style={{ background: cfg.bg }}
           >
             <motion.div
               initial={{ scale: 0.4, opacity: 0 }}
@@ -274,32 +280,49 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className="flex flex-col items-center gap-2"
             >
-              <motion.span
-                animate={{ y: flashResponse === 'higher' ? [-8, 8, -8] : flashResponse === 'lower' ? [8, -8, 8] : [0] }}
-                transition={{ repeat: 2, duration: 0.4 }}
-                style={{ fontSize: 120, lineHeight: 1, color: cfg.color, textShadow: `0 0 60px ${cfg.color}88` }}
-              >
-                {cfg.icon}
-              </motion.span>
-              <span
-                className="text-4xl font-black tracking-widest"
-                style={{ color: cfg.color, textShadow: `0 0 30px ${cfg.color}66` }}
-              >
-                {cfg.label}
-              </span>
-              <span className="text-sm text-white/50 mt-1">
-                {target?.username} responded
-              </span>
-              {teaseMessage && flashResponse !== 'correct' && (
-                <motion.span
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-base text-white/70 mt-2 font-medium italic"
-                >
-                  {teaseMessage}
-                </motion.span>
-              )}
+              <AnimatePresence mode="wait">
+                {!teaseMessage ? (
+                  <motion.div
+                    key="direction"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <motion.span
+                      animate={{ y: flashResponse === 'higher' ? [-8, 8, -8] : flashResponse === 'lower' ? [8, -8, 8] : [0] }}
+                      transition={{ repeat: 2, duration: 0.4 }}
+                      style={{ fontSize: 120, lineHeight: 1, color: cfg.color, textShadow: `0 0 60px ${cfg.color}88` }}
+                    >
+                      {cfg.icon}
+                    </motion.span>
+                    <span
+                      className="text-4xl font-black tracking-widest"
+                      style={{ color: cfg.color, textShadow: `0 0 30px ${cfg.color}66` }}
+                    >
+                      {cfg.label}
+                    </span>
+                    <span className="text-sm text-white/50 mt-1">
+                      {target?.username} responded
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="tease"
+                    initial={{ opacity: 0, scale: 0.7, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+                    className="flex flex-col items-center gap-1 px-6 text-center"
+                  >
+                    <span className="text-5xl mb-2">😂</span>
+                    <span className="text-2xl font-black text-white/90 tracking-wide">
+                      {teaseMessage}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         )}
@@ -486,11 +509,9 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
             <CardContent className="px-4 pb-4">
               <ScrollArea className="h-32">
                 <div className="space-y-1 pr-2">
-                  {[...events]
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                    .map((e) => (
-                      <EventLine key={e.id} event={e} players={players} />
-                    ))}
+                  {sortedEvents.map((e) => (
+                    <EventLine key={e.id} event={e} players={players} />
+                  ))}
                 </div>
               </ScrollArea>
             </CardContent>

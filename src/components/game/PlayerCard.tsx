@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { Player } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 
@@ -18,10 +17,8 @@ export function PlayerCard({ player, isMe, isHost, isCurrentGuesser, isCurrentTa
   const isSmall = size === 'sm'
 
   return (
-    <motion.div
-      layout
-      animate={player.is_eliminated ? { opacity: 0.4, scale: 0.97 } : { opacity: 1, scale: 1 }}
-      className={`relative flex items-center gap-3 rounded-xl border transition-all ${
+    <div
+      className={`relative flex items-center gap-3 rounded-xl border transition-colors ${
         isSmall ? 'p-2' : 'p-3'
       } ${
         isCurrentGuesser
@@ -29,7 +26,7 @@ export function PlayerCard({ player, isMe, isHost, isCurrentGuesser, isCurrentTa
           : isCurrentTarget
           ? 'border-red-500/40 bg-red-500/10'
           : 'border-white/8 bg-white/5'
-      } ${player.is_eliminated ? 'grayscale' : ''}`}
+      } ${player.is_eliminated ? 'opacity-40 grayscale' : ''}`}
     >
       {/* Avatar */}
       <div
@@ -76,6 +73,6 @@ export function PlayerCard({ player, isMe, isHost, isCurrentGuesser, isCurrentTa
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
