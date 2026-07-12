@@ -29,26 +29,123 @@ const RESPONSE_CONFIG: Record<ResponseType, { icon: string; label: string; color
   correct:{ icon: '✓', label: 'CORRECT!',color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
 }
 
-const TEASE_MESSAGES = [
-  "Not even close! 😂",
-  "My grandma guesses better",
-  "Nice try though 😏",
-  "Keep dreaming 🤡",
-  "Ooph, way off!",
-  "Really? REALLY? 💀",
-  "The audacity... 😤",
-  "Certified miss 💨",
-  "Better luck next turn",
-  "That was rough 😬",
-  "Big miss energy 🎯",
-  "Even a bot does better 🤖",
+const TEASE_MESSAGES: [string, string][] = [
+  ["😂", "Not even close!"],
+  ["👵", "My grandma guesses better"],
+  ["😏", "Nice try though"],
+  ["🤡", "Keep dreaming"],
+  ["💨", "Ooph, way off!"],
+  ["💀", "Really? REALLY?"],
+  ["😤", "The audacity..."],
+  ["🎯", "Certified miss"],
+  ["🍀", "Better luck next turn"],
+  ["😬", "That was rough"],
+  ["⚡", "Big miss energy"],
+  ["🤖", "Even a bot does better"],
+  ["🥴", "Were you even trying?"],
+  ["😵", "My eyes are burning"],
+  ["🌍", "That number was nowhere close"],
+  ["🎲", "Did you guess randomly?"],
+  ["🍔", "Sir this is a Wendy's"],
+  ["🙏", "Sending thoughts and prayers"],
+  ["😭", "The confidence though..."],
+  ["🪖", "Bold strategy, zero results"],
+  ["🖥️", "Error 404: correct guess not found"],
+  ["👀", "That hurt to watch"],
+  ["🤔", "Maybe try a different number"],
+  ["🎪", "You absolute clown"],
+  ["🪙", "I've seen better guesses from a coin flip"],
+  ["💀", "Bro really said that number"],
+  ["🎖️", "Mission failed successfully"],
+  ["😮", "We're so back... wait no we're not"],
+  ["📋", "Certified L moment"],
+  ["🧮", "The math is not mathing"],
+  ["🔍", "Skill issue detected"],
+  ["😔", "Please... just... no"],
+  ["🌀", "That was so bad it circled back to funny"],
+  ["👑", "Not the guessing queen you thought"],
+  ["🎬", "Plot twist: that was wrong"],
+  ["📊", "Statistical anomaly: still wrong"],
+  ["💔", "I felt that miss in my soul"],
+  ["😢", "The number is crying right now"],
+  ["🏆", "Try harder, champ"],
+  ["🙃", "You got this! (you don't)"],
+  ["🦕", "Darwin's guessing theory in action"],
+  ["🌿", "Touch grass, then guess again"],
+  ["📏", "My disappointment is immeasurable"],
+  ["🙈", "This is why we can't have nice things"],
+  ["🕯️", "Somewhere a number weeps"],
+  ["🎮", "Not your day, not your game"],
+  ["🙈", "Bro is guessing with eyes closed"],
+  ["🪐", "You and the right answer live on different planets"],
+  ["🫣", "Imagine guessing that"],
+  ["📉", "Your guessing arc is not it"],
+  ["🤦", "Did you just... yeah you did"],
+  ["👻", "The vibes said wrong"],
+  ["🏗️", "Built different (badly)"],
+  ["⚰️", "That was a war crime against numbers"],
+  ["🚫", "We going to pretend that didn't happen"],
+  ["🚑", "Sir/ma'am, are you okay?"],
+  ["🧠", "404 brain cells not found"],
+  ["🌑", "That was a shot in the dark"],
+  ["🕳️", "Into the void it goes"],
+  ["🤷", "Technically a guess. Barely."],
+  ["📡", "You guessed wrong in 4K HD"],
+  ["📣", "The crowd goes mild"],
+  ["💭", "Even autocorrect wouldn't suggest that"],
+  ["🆘", "Do you need a hint? (you need a hint)"],
+  ["⏳", "Loading better guess... failed"],
+  ["😮‍💨", "Guessing with full confidence, zero accuracy"],
+  ["😹", "The number is laughing at you"],
+  ["🫡", "Respectfully... no"],
+  ["🏅", "You tried. You failed. Iconic."],
+  ["🤖", "The algorithm rejects your answer"],
+  ["⚡", "That was giving very wrong energy"],
+  ["✅", "Bravery ✅  Accuracy ❌"],
+  ["🦹", "That was a villain origin story"],
+  ["🏃", "Are you speedrunning losing?"],
+  ["💔", "Next time guess with your heart"],
+  ["😬", "Your future self cringed"],
+  ["🏺", "Legendary miss, honestly"],
+  ["🪦", "Hall of shame material right there"],
+  ["😞", "I'm not mad, just disappointed"],
+  ["📐", "The range on that miss though"],
+  ["🎙️", "Narrator: it was not the right number"],
+  ["🔮", "You manifested the wrong number"],
+  ["🥛", "That guess aged like warm milk"],
+  ["🌋", "Incredible. Incredibly wrong."],
+  ["💅", "The audacity is unmatched"],
+  ["🌅", "One day you'll get one right"],
+  ["🎳", "Keep shooting your shot (and missing)"],
+  ["📜", "History will remember this guess"],
+  ["🚪", "The number has left the chat"],
+  ["🎻", "Nobody: ...  You: that number"],
+  ["🫠", "Melting from secondhand embarrassment"],
+  ["🌊", "Drowned in wrongness"],
+  ["🧊", "Ice cold, not in a good way"],
+  ["🐠", "Something smells fishy about that guess"],
+  ["🎠", "Round and round, still wrong"],
+  ["🌪️", "Chaos energy, zero results"],
+  ["🦆", "Quack (that's what your guess was)"],
+  ["🪤", "Walked right into that miss"],
+  ["🎭", "Truly a performance of wrongness"],
 ]
+
+const teasePool = { remaining: [...TEASE_MESSAGES] }
+
+function getNextTease(): [string, string] {
+  if (teasePool.remaining.length === 0) {
+    teasePool.remaining = [...TEASE_MESSAGES]
+  }
+  const idx = Math.floor(Math.random() * teasePool.remaining.length)
+  return teasePool.remaining.splice(idx, 1)[0]
+}
 
 export function GameplayView({ game, players, myPlayer, events, onRefresh }: Props) {
   const [guessInput, setGuessInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [flashResponse, setFlashResponse] = useState<ResponseType | null>(null)
-  const [teaseMessage, setTeaseMessage] = useState<string | null>(null)
+  const [teaseMessage, setTeaseMessage] = useState<[string, string] | null>(null)
   const lastSeenResponseId = useRef<string | null>(null)
   const botActing = useRef(false)
 
@@ -84,7 +181,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
       playResponseSound(r, pack)
       // tease appears after direction has been shown for 0.8s
       const tease = setTimeout(() => {
-        setTeaseMessage(TEASE_MESSAGES[Math.floor(Math.random() * TEASE_MESSAGES.length)])
+        setTeaseMessage(getNextTease())
       }, 800)
       const hide = setTimeout(() => setFlashResponse(null), 2800)
       return () => { clearTimeout(tease); clearTimeout(hide) }
@@ -314,12 +411,14 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-                    className="flex flex-col items-center gap-1 px-6 text-center"
+                    className="flex flex-col items-center gap-3 px-4 text-center"
                   >
-                    <span className="text-5xl mb-2">😂</span>
-                    <span className="text-2xl font-black text-white/90 tracking-wide">
-                      {teaseMessage}
-                    </span>
+                    <span className="text-6xl">{teaseMessage[0]}</span>
+                    <div className="rounded-2xl bg-black/70 border border-white/10 px-6 py-3 max-w-xs">
+                      <span className="text-xl font-black text-white tracking-wide">
+                        {teaseMessage[1]}
+                      </span>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
