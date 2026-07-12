@@ -183,7 +183,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
       const tease = setTimeout(() => {
         setTeaseMessage(getNextTease())
       }, 800)
-      const hide = setTimeout(() => setFlashResponse(null), 2800)
+      const hide = setTimeout(() => setFlashResponse(null), 3800)
       return () => { clearTimeout(tease); clearTimeout(hide) }
     }
     const t = setTimeout(() => setFlashResponse(null), 1800)
