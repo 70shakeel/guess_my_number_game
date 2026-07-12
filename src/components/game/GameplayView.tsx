@@ -254,6 +254,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
   useEffect(() => {
     if (!isHost) return
     if (botActing.current) return
+    if (flashResponse) return  // wait for flash overlay to finish before bots act
 
     const currentGuesserPlayer = players.find((p) => p.id === game.current_guesser_id)
     const currentTargetPlayer = players.find((p) => p.id === game.current_target_id)
@@ -307,7 +308,7 @@ export function GameplayView({ game, players, myPlayer, events, onRefresh }: Pro
       return () => { clearTimeout(timer); botActing.current = false }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHost, game.current_guesser_id, game.current_target_id, hasPendingGuess, pendingGuessValue, activePlayers.length])
+  }, [isHost, flashResponse, game.current_guesser_id, game.current_target_id, hasPendingGuess, pendingGuessValue, activePlayers.length])
 
   // ── human actions ──────────────────────────────────────────────────────────
 
